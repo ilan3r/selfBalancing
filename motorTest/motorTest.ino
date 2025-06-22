@@ -1,45 +1,63 @@
-// simple test for motor control 
+// // Use ESP32 LEDC for PWM (because analogWrite is not standard on ESP32)
+// const int pwmChannelA = 0;
+// const int pwmChannelB = 1;
+// const int pwmFreq = 1000;
+// const int pwmResolution = 8; // 8-bit = 0-255
 
-const int IN1 = 18;     // Motor A input 1
-const int IN2 = 19;     // Motor A input 2
-const int ENA = 23;     // Motor A enable (PWM capable)
+// Motor A pins
+const int IN1 = 15;
+const int IN2 = 2;
+const int ENA = 16;  // PWM capable
+
+// Motor B pins
+const int IN3 = 4;
+const int IN4 = 0;
+const int ENB = 12;  // PWM capable
 
 void setup() {
-  // Set pin modes
+  Serial.begin(115200);
+  Serial.println("Starting motor test...");
+
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
   pinMode(ENA, OUTPUT);
 
-  // Start Serial for debugging
-  Serial.begin(115200);
-  Serial.println("Motor test starting...");
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
+  pinMode(ENB, OUTPUT);
 }
 
 void loop() {
-  // Forward
-  Serial.println("Motor Forward");
+  // FORWARD
+  Serial.println("Motors forward");
   digitalWrite(IN1, HIGH);
   digitalWrite(IN2, LOW);
-  analogWrite(ENA, 200);  // PWM value (0-255)
+  digitalWrite(IN3, HIGH);
+  digitalWrite(IN4, LOW);
+  analogWrite(ENA, 200);  // 0–255
+  analogWrite(ENB, 200);
+  delay(2000);
 
-  // delay(2000);
+  // STOP
+  Serial.println("Motors stop");
+  analogWrite(ENA, 0);
+  analogWrite(ENB, 0);
+  delay(1000);
 
-  // // Stop
-  // Serial.println("Motor Stop");
-  // analogWrite(ENA, 0);
-  // delay(1000);
+  // REVERSE
+  Serial.println("Motors reverse");
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, HIGH);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH);
+  analogWrite(ENA, 200);
+  analogWrite(ENB, 200);
+  delay(2000);
 
-  // // Reverse
-  // Serial.println("Motor Reverse");
-  // digitalWrite(IN1, LOW);
-  // digitalWrite(IN2, HIGH);
-  // analogWrite(ENA, 200);
-
-  // delay(2000);
-
-  // // Stop again
-  // Serial.println("Motor Stop");
-  // analogWrite(ENA, 0);
-  // delay(2000);
+  // STOP
+  Serial.println("Motors stop");
+  analogWrite(ENA, 0);
+  analogWrite(ENB, 0);
+  delay(1000);
 }
 
