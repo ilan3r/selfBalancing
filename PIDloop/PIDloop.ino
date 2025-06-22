@@ -15,14 +15,14 @@ const int PID_INTERVAL_MS = 10;
 
 
 //  PID loop variables 
-float kp = 1.23;  // var1 
-float kd = 4.56;   // var2 
-float ki = 7.89;   // var3
+float kp = 25.0;  // var1 
+float kd = 1.2;   // var2 
+float ki = 60.0;   // var3
 
 float error, previousError = 0, integral = 0, derivative = 0; 
 unsigned long lastTime = 0, startTime = 0, lastPIDtime = 0; 
 bool calibrated = false; 
-float targetAngle = 0, currentAngle = 0, output = 0; 
+float targetAngle = 0; 
 
 
 // ========================================== pin declarations 
@@ -53,9 +53,11 @@ void setup() {
 
   Serial.begin(115200);
   pinMode(LEDpin, OUTPUT); 
+  digitalWrite(LEDpin, HIGH); 
+  
 
-  SerialBT.begin("ESP32-BT-Ilan");  // Bluetooth device name
-  Serial.println("Bluetooth ready. Pair and open a serial terminal.");
+  SerialBT.begin("ESP32-BT-Ilan2");  // Bluetooth device name
+  Serial.printf("Bluetooth ready. Pair and open a serial terminal.");
 
   Wire.begin(21, 22);  // set SDA and SCL for ESP32
   bno.begin();
@@ -64,6 +66,7 @@ void setup() {
     Serial.println("Couldn't find BNO055. Check wiring!");
     while (1);
   }
+  Serial.println("hello world");
 
   bno.setExtCrystalUse(true); // Optional but improves accuracy
 
@@ -77,13 +80,14 @@ void setup() {
 
   startTime = millis(); 
 
-  digitalWrite(LEDpin, HIGH); 
+
 
 }
 
 
 // =============================== main loop 
 void loop() {
+  digitalWrite(LEDpin, LOW);
 
   // calibrate if just started 
   if (!calibrated && (millis() - startTime > 5000)){
@@ -142,19 +146,22 @@ void runPIDloop(){
   float dt = (millis() - lastTime) / 1000.0; 
   lastTime = millis(); 
 
-  // get angle from the BNO055 
   imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
-  float currentAngle = euler.y(); 
+  float currentAngle = euler.z();  // pitch
 
 
   // PID calculations 
   error = targetAngle - currentAngle; 
   integral += error * dt; 
   derivative = (error - previousError) / dt; 
-  output = kp * error + kd * derivative + ki * integral; 
+  float output = kp * error + kd * derivative + ki * integral; 
   previousError = error; 
 
   output = constrain(output, -255, 255);
+  // SerialBT.printf("angle = %.2f  |  output = %.2f \r\n", currentAngle, output);
+  Serial.printf("angle = %.2f  |  output = %.2f\r\n", currentAngle, output);
+
+
   writeMotors(output);
 
 }
@@ -200,7 +207,7 @@ void handleCommand(String cmd) {
   SerialBT.println("' \r\n");
 
   if (cmd.startsWith("set1=")) {
-    ki = cmd.substring(5).toFloat();
+    kp = cmd.substring(5).toFloat();
     SerialBT.printf("Updated var1 = %.2f\r\n", kp);
   } 
   else if (cmd.startsWith("set2=")) {
@@ -220,9 +227,6 @@ void handleCommand(String cmd) {
   else if (cmd.equalsIgnoreCase("h")) {
     SerialBT.println("hello world\r\n");
   } 
-  else if (cmd.equalsIgnoreCase("a")) {
-    SerialBT.printf("angle = %.2f  |  output = %.2f \r\n", currentAngle, output);
-  }
   else {
     SerialBT.println("Unknown command\r\n");
   }

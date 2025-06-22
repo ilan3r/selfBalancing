@@ -6,13 +6,19 @@
 
 Adafruit_BNO055 bno = Adafruit_BNO055(55);
 
+const int LEDbuiltIn = 2;
+
 
 
 void setup() {
+  pinMode(LEDbuiltIn, OUTPUT);
+  digitalWrite(LEDbuiltIn, HIGH);
+
   Wire.begin(21, 22);  // set SDA and SCL for ESP32
   bno.begin();
 
   Serial.begin(115200);
+  Serial.println("hello world");
   delay(1000);
 
   if (!bno.begin()) {
@@ -21,6 +27,8 @@ void setup() {
   }
 
   bno.setExtCrystalUse(true); // Optional but improves accuracy
+
+  digitalWrite(LEDbuiltIn, LOW);
 }
 
 void loop() {
