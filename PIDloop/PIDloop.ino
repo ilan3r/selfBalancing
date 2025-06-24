@@ -1,3 +1,12 @@
+/*
+
+TODO: 
+- add a globabl boolean that can be used to print out the angle and output to the serial blueooth monitor
+- why isn't motor1 (ENA) moving backwards at all? -- beacuse the LED pin is the same as the motor direction pin oops
+
+*/
+
+
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
@@ -15,14 +24,14 @@ const int PID_INTERVAL_MS = 10;
 
 
 //  PID loop variables 
-float kp = 25.0;  // var1 
-float kd = 1.2;   // var2 
-float ki = 60.0;   // var3
+float kp = -5.0;  // var1 
+float kd = 0.0;   // var2 
+float ki = 0.0;   // var3
 
 float error, previousError = 0, integral = 0, derivative = 0; 
 unsigned long lastTime = 0, startTime = 0, lastPIDtime = 0; 
 bool calibrated = false; 
-float targetAngle = 0; 
+float targetAngle = 67.00; 
 
 
 // ========================================== pin declarations 
@@ -46,13 +55,15 @@ void handleCommand(String cmd);
 void writeMotors(int motorSpeed);
 void runPIDloop(); 
 
+float getAngle(); 
+
 
 
 // ======================= setup loop 
 void setup() {
 
   Serial.begin(115200);
-  pinMode(LEDpin, OUTPUT); 
+  // pinMode(LEDpin, OUTPUT); 
   digitalWrite(LEDpin, HIGH); 
   
 
@@ -87,13 +98,13 @@ void setup() {
 
 // =============================== main loop 
 void loop() {
-  digitalWrite(LEDpin, LOW);
+  // digitalWrite(LEDpin, LOW);
 
   // calibrate if just started 
   if (!calibrated && (millis() - startTime > 5000)){
 
     imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
-    targetAngle = euler.y();  // Set roll as upright reference
+    // targetAngle = euler.y();  // Set roll as upright reference
     calibrated = true;
     lastTime = millis();
     Serial.println("Calibrated! Target angle set.");
@@ -130,8 +141,6 @@ void loop() {
       inputBuffer += c;
     }
   }
-
-  // understand waht output does and cap it at 255 or -255 
   
   if (millis() - lastPIDtime >= PID_INTERVAL_MS){
     lastPIDtime = millis(); 
@@ -146,8 +155,10 @@ void runPIDloop(){
   float dt = (millis() - lastTime) / 1000.0; 
   lastTime = millis(); 
 
-  imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
-  float currentAngle = euler.z();  // pitch
+  float currentAngle = getAngle();  // pitch
+
+
+
 
 
   // PID calculations 
@@ -157,9 +168,11 @@ void runPIDloop(){
   float output = kp * error + kd * derivative + ki * integral; 
   previousError = error; 
 
-  output = constrain(output, -255, 255);
+
+  float outputCap = constrain(output, -255, 255);
+
   // SerialBT.printf("angle = %.2f  |  output = %.2f \r\n", currentAngle, output);
-  Serial.printf("angle = %.2f  |  output = %.2f\r\n", currentAngle, output);
+  Serial.printf("targetAngle = %.2f  |  angle = %.2f  |  outputCap = %.2f  |  output = %.2f  |  error = %.2f \r\n" , targetAngle, currentAngle, outputCap, output, error);
 
 
   writeMotors(output);
@@ -171,25 +184,42 @@ void runPIDloop(){
 
 void writeMotors(int motorSpeed){
 
+  if (motorSpeed > 100 && motorSpeed < -100){
+    analogWrite(ENA, 0);
+    analogWrite(ENB, 0);
+    digitalWrite(IN1, LOW);
+    digitalWrite(IN2, LOW);
+    digitalWrite(IN3, LOW);
+    digitalWrite(IN4, LOW);
+
+  }
+
   // move backwards if negative number 
-  if (motorSpeed < 0){
+  if (motorSpeed < -100){
     // make the speed positive 
     motorSpeed *= -1; 
+    Serial.println("BACKWARDS ====================================================");
+
     digitalWrite(IN1, LOW);
     digitalWrite(IN2, HIGH);
     digitalWrite(IN3, LOW);
     digitalWrite(IN4, HIGH);
-    analogWrite(ENA, motorSpeed);
-    analogWrite(ENB, motorSpeed);
+
+
+    // analogWrite(ENA, abs(motorSpeed));
+    analogWrite(ENA, abs(motorSpeed));
+    analogWrite(ENB, abs(motorSpeed));
 
 
   }
 
-  else if (motorSpeed >= 0){
+  else if (motorSpeed >= 100){
+
     digitalWrite(IN1, HIGH);
     digitalWrite(IN2, LOW);
     digitalWrite(IN3, HIGH);
     digitalWrite(IN4, LOW);
+
     analogWrite(ENA, motorSpeed);  
     analogWrite(ENB, motorSpeed);
 
@@ -197,6 +227,26 @@ void writeMotors(int motorSpeed){
 }
 
 
+
+float getAngle(){
+  imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
+  sensors_event_t accel_event;
+  bno.getEvent(&accel_event, Adafruit_BNO055::VECTOR_ACCELEROMETER);
+  float accel_z = accel_event.acceleration.z;
+
+  // if leaning forwards, a_z is negative 
+  if (accel_z < 0){
+    return (180.0 - euler.y());
+  }
+
+  // if leaning backwards, a_z is positive 
+  else {
+   return euler.y(); 
+
+  }
+
+
+}
 
 
 void handleCommand(String cmd) {

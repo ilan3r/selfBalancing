@@ -14,6 +14,8 @@ const int IN3 = 4;
 const int IN4 = 0;
 const int ENB = 12;  // PWM capable
 
+const int motSpeed = 100;   // test the minimum motor speed
+
 void setup() {
   Serial.begin(115200);
   Serial.println("Starting motor test...");
@@ -34,8 +36,8 @@ void loop() {
   digitalWrite(IN2, LOW);
   digitalWrite(IN3, HIGH);
   digitalWrite(IN4, LOW);
-  analogWrite(ENA, 200);  // 0–255
-  analogWrite(ENB, 200);
+  analogWrite(ENA, motSpeed);  // 0–255
+  analogWrite(ENB, motSpeed);
   delay(2000);
 
   // STOP
@@ -50,8 +52,8 @@ void loop() {
   digitalWrite(IN2, HIGH);
   digitalWrite(IN3, LOW);
   digitalWrite(IN4, HIGH);
-  analogWrite(ENA, 200);
-  analogWrite(ENB, 200);
+  analogWrite(ENA, motSpeed);
+  analogWrite(ENB, motSpeed);
   delay(2000);
 
   // STOP
